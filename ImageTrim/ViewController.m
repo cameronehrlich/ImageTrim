@@ -7,6 +7,7 @@
 //
 
 #import "ViewController.h"
+#import "UIImage+ImageTrim.h"
 
 @interface ViewController ()
 
@@ -14,9 +15,15 @@
 
 @implementation ViewController
 
-- (void)viewDidLoad {
+- (void)viewDidLoad
+{
     [super viewDidLoad];
-    // Do any additional setup after loading the view, typically from a nib.
+
+    self.view.backgroundColor = [[UIColor blueColor] colorWithAlphaComponent:0.5f];
+    
+    UIImage *image = [UIImage imageNamed:@"Screen Shot 2016-01-26 at 4.28.12 PM"];
+    
+    self.imageView.image = [UIImage trimmedImageFromImage:image withBorderColor:[UIColor whiteColor] withTolerance:0.1f];
 }
 
 - (void)didReceiveMemoryWarning {

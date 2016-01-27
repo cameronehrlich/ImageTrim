@@ -13,6 +13,7 @@
 		7EFE61731C584EE600E3EFB5 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7EFE61711C584EE600E3EFB5 /* Main.storyboard */; };
 		7EFE61751C584EE600E3EFB5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7EFE61741C584EE600E3EFB5 /* Assets.xcassets */; };
 		7EFE61781C584EE600E3EFB5 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7EFE61761C584EE600E3EFB5 /* LaunchScreen.storyboard */; };
+		7EFE61811C584F7500E3EFB5 /* UIImage+ImageTrim.m in Sources */ = {isa = PBXBuildFile; fileRef = 7EFE61801C584F7500E3EFB5 /* UIImage+ImageTrim.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,8 @@
 		7EFE61741C584EE600E3EFB5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7EFE61771C584EE600E3EFB5 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		7EFE61791C584EE600E3EFB5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7EFE617F1C584F7500E3EFB5 /* UIImage+ImageTrim.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImage+ImageTrim.h"; sourceTree = "<group>"; };
+		7EFE61801C584F7500E3EFB5 /* UIImage+ImageTrim.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImage+ImageTrim.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,6 +67,8 @@
 				7EFE616F1C584EE600E3EFB5 /* ViewController.m */,
 				7EFE61711C584EE600E3EFB5 /* Main.storyboard */,
 				7EFE61741C584EE600E3EFB5 /* Assets.xcassets */,
+				7EFE617F1C584F7500E3EFB5 /* UIImage+ImageTrim.h */,
+				7EFE61801C584F7500E3EFB5 /* UIImage+ImageTrim.m */,
 				7EFE61761C584EE600E3EFB5 /* LaunchScreen.storyboard */,
 				7EFE61791C584EE600E3EFB5 /* Info.plist */,
 				7EFE61681C584EE600E3EFB5 /* Supporting Files */,
@@ -150,6 +155,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7EFE61701C584EE600E3EFB5 /* ViewController.m in Sources */,
+				7EFE61811C584F7500E3EFB5 /* UIImage+ImageTrim.m in Sources */,
 				7EFE616D1C584EE600E3EFB5 /* AppDelegate.m in Sources */,
 				7EFE616A1C584EE600E3EFB5 /* main.m in Sources */,
 			);
