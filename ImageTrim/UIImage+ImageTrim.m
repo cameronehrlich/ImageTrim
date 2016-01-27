@@ -12,6 +12,10 @@
 
 @implementation UIImage (ImageTrim)
 
+static NSUInteger const bytesPerRow = 4;
+static NSUInteger const bitsPerComponent = 8;
+static NSUInteger const maxColorSpaceValue = 255;
+
 + (UIImage *)trimmedImageFromImage:(UIImage *)image withBorderColor:(UIColor *)borderColor withTolerance:(CGFloat)tolerance
 {
     CGRect newRect = [self cropRectForImage:image withBorderColor:borderColor withTolerance:tolerance];
@@ -24,147 +28,97 @@
 + (CGRect)cropRectForImage:(UIImage *)image withBorderColor:(UIColor *)borderColor withTolerance:(CGFloat)tolerance
 {
     CGImageRef cgImage = image.CGImage;
-    CGContextRef context = [self createARGBBitmapContextFromImage:cgImage];
-    if (context == NULL) {
-        NSLog(@"Failed to create valid bitmap context.");
-        return CGRectZero;
-    }
-    
-    NSUInteger borderRed, borderGreen, borderBlue, borderAlpha;
-    
-    const CGFloat *components = CGColorGetComponents(borderColor.CGColor);
-
-    // if black or white... see http://stackoverflow.com/questions/9238743/is-there-an-issue-with-cgcolorgetcomponents
-    if (CGColorGetNumberOfComponents(borderColor.CGColor) == 2) {
-        borderRed   = (NSUInteger) components[0] * 255;
-        borderGreen = (NSUInteger) components[0] * 255;
-        borderBlue  = (NSUInteger) components[0] * 255;
-        borderAlpha = (NSUInteger) components[1] * 255;
-    }
-    else if (CGColorGetNumberOfComponents(borderColor.CGColor) == 4) {
-        borderRed   = (NSUInteger) components[0] * 255;
-        borderGreen = (NSUInteger) components[1] * 255;
-        borderBlue  = (NSUInteger) components[2] * 255;
-        borderAlpha = (NSUInteger) components[3] * 255;
-    }
-    else {
-        NSLog(@"Unknown number of color components");
-        return CGRectZero;
-    }
-    
-    NSLog(@"r=%ld, g=%ld, b=%ld, a=%ld", borderRed, borderGreen, borderBlue, borderAlpha);
     
     size_t width = CGImageGetWidth(cgImage);
     size_t height = CGImageGetHeight(cgImage);
     
+    NSUInteger bitmapBytesPerRow = (width * bytesPerRow);
+    NSUInteger bitmapByteCount = (bitmapBytesPerRow * height);
+    
+    
+    unsigned char *bitmapData = malloc(bitmapByteCount);
+    if (bitmapData == NULL) {
+        return CGRectZero;
+    }
+    
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    
+    CGContextRef context = CGBitmapContextCreate(bitmapData,
+                                                 width,
+                                                 height,
+                                                 bitsPerComponent,
+                                                 bitmapBytesPerRow,
+                                                 colorSpace,
+                                                 kCGImageAlphaPremultipliedFirst);
+    CGColorSpaceRelease(colorSpace);
+    
+    if (context == NULL)  {
+        free(bitmapData);
+        return CGRectZero;
+    }
+    
     CGRect rect = CGRectMake(0.0f, 0.0f, width, height);
-    
     CGContextDrawImage(context, rect, cgImage);
-    
-    unsigned char *data = CGBitmapContextGetData(context);
     CGContextRelease(context);
     
+    const CGFloat *components = CGColorGetComponents(borderColor.CGColor);
+    const size_t numberOfComponents = CGColorGetNumberOfComponents(borderColor.CGColor);
+    
+    NSUInteger borderRed, borderGreen, borderBlue, borderAlpha;
+    if (numberOfComponents == 2) { // if black or white...see http://stackoverflow.com/questions/9238743/is-there-an-issue-with-cgcolorgetcomponents
+        borderRed = borderGreen = borderBlue = components[0] * maxColorSpaceValue;
+        borderAlpha = components[1] * maxColorSpaceValue;
+    }
+    else if (numberOfComponents == 4) {
+        borderRed   = components[0] * maxColorSpaceValue;
+        borderGreen = components[1] * maxColorSpaceValue;
+        borderBlue  = components[2] * maxColorSpaceValue;
+        borderAlpha = components[3] * maxColorSpaceValue;
+    }
+    else {
+        NSLog(@"Unknown number of color components");
+        free(bitmapData);
+        return CGRectZero;
+    }
     
     NSInteger imageAlpha, imageRed, imageGreen, imageBlue;
-    
     NSUInteger lowX = width;
     NSUInteger lowY = height;
     NSUInteger highX = 0;
     NSUInteger highY = 0;
-    if (data != NULL) {
-        for (NSUInteger y = 0; y < height; y++) {
-            for (NSUInteger x = 0; x < width; x++) {
-                NSUInteger startingIndex = (width * y + x) * 4 /* 4 for A, R, G, B */;
+    for (NSUInteger y = 0; y < height; y++) {
+        for (NSUInteger x = 0; x < width; x++) {
+            
+            NSUInteger startingIndex = ((width * y) + x) * bytesPerRow; /// * 4 for A, R, G, B
+            
+            imageAlpha  = bitmapData[startingIndex + 0];
+            imageRed    = bitmapData[startingIndex + 1];
+            imageGreen  = bitmapData[startingIndex + 2];
+            imageBlue   = bitmapData[startingIndex + 3];
+            
+            CGFloat toleranceThreashold = (tolerance * maxColorSpaceValue);
+            
+            BOOL isAlphaMatch   = ABS(borderAlpha - imageAlpha)   < toleranceThreashold;
+            BOOL isRedMatch     = ABS(borderRed - imageRed)       < toleranceThreashold;
+            BOOL isGreenMatch   = ABS(borderGreen - imageGreen)   < toleranceThreashold;
+            BOOL isBlueMatch    = ABS(borderBlue - imageBlue)     < toleranceThreashold;
+            
+            BOOL isColorMatch = isRedMatch & isGreenMatch & isBlueMatch & isAlphaMatch;
+            
+            if (!isColorMatch) {
                 
-                imageAlpha  = data[startingIndex];
-                imageRed    = data[startingIndex + 1];
-                imageGreen  = data[startingIndex + 2];
-                imageBlue   = data[startingIndex + 3];
+                if (x < lowX) lowX = x;
+                else if (x > highX) highX = x;
                 
-                BOOL isAlphaMatch = ABS(borderAlpha - imageAlpha) < (tolerance * 255);
-                BOOL isRedMatch   = ABS(borderRed - imageRed)     < (tolerance * 255);
-                BOOL isGreenMatch = ABS(borderGreen - imageGreen) < (tolerance * 255);
-                BOOL isBlueMatch = ABS(borderBlue - imageBlue) < (tolerance * 255);
-                
-                BOOL isColorMatch = isAlphaMatch && isRedMatch && isGreenMatch && isBlueMatch;
-                
-                if (!isColorMatch) {
-                    
-//                    NSLog(@"r = %ld : %ld, g = %ld : %ld, b = %ld : %ld, a = %ld : %ld", borderRed, imageRed, borderGreen, imageGreen, borderBlue, imageBlue, borderAlpha, imageAlpha);
-
-                    if (x < lowX)  {
-                        lowX = x;
-                    }
-                    if (x > highX) {
-                        highX = x;
-                    }
-                    if (y < lowY) {
-                        lowY = y;
-                    }
-                    if (y > highY) {
-                        highY = y;
-                    }
-                }
+                if (y < lowY) lowY = y;
+                else if (y > highY) highY = y;
             }
         }
-        free(data);
     }
-    else {
-        NSLog(@"Failed to determine rect for trim.");
-        return CGRectZero;
-    }
+    
+    free(bitmapData);
     
     return CGRectMake(lowX, lowY, highX-lowX, highY-lowY);
-}
-
-+ (CGContextRef)createARGBBitmapContextFromImage:(CGImageRef)inImage
-{
-    CGContextRef context = NULL;
-    CGColorSpaceRef colorSpace;
-    void *bitmapData;
-    NSUInteger bitmapByteCount;
-    NSUInteger bitmapBytesPerRow;
-    
-    // Get image width, height. We'll use the entire image.
-    size_t width = CGImageGetWidth(inImage);
-    size_t height = CGImageGetHeight(inImage);
-    
-    // Declare the number of bytes per row. Each pixel in the bitmap in this
-    // example is represented by 4 bytes; 8 bits each of red, green, blue, and
-    // alpha.
-    bitmapBytesPerRow = (width * 4);
-    bitmapByteCount = (bitmapBytesPerRow * height);
-    
-    // Use the generic RGB color space.
-    colorSpace = CGColorSpaceCreateDeviceRGB();
-    if (colorSpace == NULL) return NULL;
-    
-    // Allocate memory for image data. This is the destination in memory
-    // where any drawing to the bitmap context will be rendered.
-    bitmapData = malloc( bitmapByteCount );
-    if (bitmapData == NULL)
-    {
-        CGColorSpaceRelease(colorSpace);
-        return NULL;
-    }
-    
-    // Create the bitmap context. We want pre-multiplied ARGB, 8-bits
-    // per component. Regardless of what the source image format is
-    // (CMYK, Grayscale, and so on) it will be converted over to the format
-    // specified here by CGBitmapContextCreate.
-    context = CGBitmapContextCreate (bitmapData,
-                                     width,
-                                     height,
-                                     8,      // bits per component
-                                     bitmapBytesPerRow,
-                                     colorSpace,
-                                     kCGImageAlphaPremultipliedFirst);
-    if (context == NULL) free (bitmapData);
-    
-    // Make sure and release colorspace before returning
-    CGColorSpaceRelease(colorSpace);
-    
-    return context;
 }
 
 @end
